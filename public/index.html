@@ -1,1 +1,1488 @@
-<div id="root"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRON REALM — Epic War</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=MedievalSharp&family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #0a0804;
+    --parchment: #c8a96e;
+    --parchment-dark: #8b6914;
+    --gold: #f0c040;
+    --gold-bright: #ffd700;
+    --red: #c0392b;
+    --blue: #1a6fa8;
+    --green: #2d7a2d;
+    --purple: #6a2d8a;
+    --orange: #c05a10;
+    --gray: #666;
+    --white: #f5ead8;
+    --shadow: rgba(0,0,0,0.8);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Crimson Text', serif;
+    color: var(--white);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    user-select: none;
+  }
+
+  canvas { display: block; }
+
+  #ui-overlay {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* TOP BAR */
+  #top-bar {
+    position: fixed; top:0; left:0; right:0;
+    background: linear-gradient(180deg, rgba(10,8,4,0.97) 0%, rgba(10,8,4,0.85) 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 6px 16px;
+    display: flex; align-items: center; gap: 16px;
+    z-index: 20; pointer-events: all;
+    font-family: 'Cinzel', serif;
+  }
+
+  #game-title {
+    font-size: 20px; font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(240,192,64,0.5);
+    flex-shrink: 0;
+  }
+
+  .stat-pill {
+    background: rgba(240,192,64,0.08);
+    border: 1px solid rgba(240,192,64,0.3);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 13px;
+    color: var(--gold);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .stat-pill .val { color: var(--white); font-weight: 600; }
+  .stat-pill .ico { font-size: 15px; }
+
+  #mode-indicator {
+    margin-left: auto;
+    font-size: 12px; letter-spacing: 2px;
+    color: var(--parchment);
+    opacity: 0.7;
+  }
+
+  /* BOTTOM PANEL (battle) */
+  #battle-panel {
+    position: fixed; bottom:0; left:0; right:0;
+    background: linear-gradient(0deg, rgba(10,8,4,0.98) 0%, rgba(10,8,4,0.85) 100%);
+    border-top: 2px solid var(--gold);
+    padding: 8px 16px;
+    display: none; align-items: center; gap: 12px;
+    z-index: 20; pointer-events: all;
+    flex-wrap: wrap;
+  }
+
+  .buy-btn {
+    background: linear-gradient(180deg, rgba(240,192,64,0.15) 0%, rgba(240,192,64,0.05) 100%);
+    border: 1px solid rgba(240,192,64,0.5);
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+    pointer-events: all;
+  }
+  .buy-btn:hover { background: rgba(240,192,64,0.25); border-color: var(--gold); color: var(--gold-bright); }
+  .buy-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .buy-btn .cost { font-size: 10px; color: var(--parchment); display: block; }
+
+  /* OVERWORLD PANEL */
+  #overworld-panel {
+    position: fixed; bottom:0; left:0; right:0;
+    background: linear-gradient(0deg, rgba(10,8,4,0.98) 0%, rgba(10,8,4,0.85) 100%);
+    border-top: 2px solid var(--gold);
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 16px;
+    z-index: 20; pointer-events: all;
+    font-family: 'Cinzel', serif;
+  }
+
+  #ow-info { flex:1; }
+  #ow-title { font-size: 15px; color: var(--gold); font-weight: 700; }
+  #ow-sub { font-size: 12px; color: var(--parchment); opacity: 0.8; margin-top: 2px; }
+
+  #end-turn-btn {
+    background: linear-gradient(180deg, #8b4400 0%, #5a2800 100%);
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 14px; font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+    pointer-events: all;
+  }
+  #end-turn-btn:hover { background: linear-gradient(180deg, #b05800 0%, #7a3800 100%); }
+
+  /* TOOLTIP */
+  #tooltip {
+    position: fixed;
+    background: rgba(10,8,4,0.95);
+    border: 1px solid var(--gold);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--white);
+    pointer-events: none;
+    z-index: 50;
+    display: none;
+    max-width: 200px;
+    font-family: 'Crimson Text', serif;
+  }
+  #tooltip strong { color: var(--gold); font-family: 'Cinzel', serif; font-size: 13px; }
+
+  /* MESSAGE LOG */
+  #msg-log {
+    position: fixed; right: 12px; top: 52px;
+    width: 280px;
+    max-height: 180px;
+    overflow: hidden;
+    display: flex; flex-direction: column-reverse; gap: 3px;
+    pointer-events: none; z-index: 15;
+  }
+  .msg {
+    background: rgba(10,8,4,0.8);
+    border-left: 3px solid var(--gold);
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--white);
+    border-radius: 0 4px 4px 0;
+    animation: slideIn 0.3s ease;
+    line-height: 1.4;
+  }
+  .msg.bad { border-color: var(--red); }
+  .msg.good { border-color: #4caf50; }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+
+  /* VICTORY / DEFEAT */
+  #end-screen {
+    position: fixed; inset:0;
+    background: rgba(0,0,0,0.9);
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+    z-index: 100;
+    font-family: 'Cinzel', serif;
+  }
+  #end-screen h1 { font-size: 64px; font-weight: 900; letter-spacing: 8px; }
+  #end-screen.victory h1 { color: var(--gold); text-shadow: 0 0 40px rgba(240,192,64,0.8); }
+  #end-screen.defeat h1 { color: var(--red); text-shadow: 0 0 40px rgba(192,57,43,0.8); }
+  #end-screen p { font-size: 20px; color: var(--parchment); }
+  #restart-btn {
+    background: linear-gradient(180deg, #8b4400 0%, #5a2800 100%);
+    border: 2px solid var(--gold);
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 16px; font-weight: 700;
+    padding: 12px 32px; border-radius: 6px;
+    cursor: pointer; letter-spacing: 2px; margin-top: 10px;
+  }
+
+  /* TURN FLASH */
+  #turn-flash {
+    position: fixed; inset:0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; z-index: 80;
+    opacity: 0;
+  }
+  #turn-flash span {
+    font-family: 'Cinzel', serif;
+    font-size: 52px; font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 60px rgba(240,192,64,0.9);
+    letter-spacing: 6px;
+  }
+
+  /* NATION LEGEND */
+  #legend {
+    position: fixed; left: 12px; top: 52px;
+    display: flex; flex-direction: column; gap: 4px;
+    pointer-events: none; z-index: 15;
+  }
+  .leg-item {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(10,8,4,0.75);
+    border: 1px solid rgba(240,192,64,0.2);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-family: 'Cinzel', serif;
+  }
+  .leg-dot { width:10px; height:10px; border-radius: 50%; flex-shrink:0; }
+  .leg-name { color: var(--white); }
+  .leg-castles { margin-left: auto; color: var(--gold); padding-left: 8px; }
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="top-bar">
+  <div id="game-title">⚔ IRON REALM</div>
+  <div class="stat-pill"><span class="ico">🏰</span> Castles: <span class="val" id="stat-castles">1</span></div>
+  <div class="stat-pill"><span class="ico">💰</span> Gold: <span class="val" id="stat-gold">200</span></div>
+  <div class="stat-pill"><span class="ico">⚔</span> Turn: <span class="val" id="stat-turn">1</span></div>
+  <div id="mode-ind">OVERWORLD</div>
+</div>
+
+<div id="legend"></div>
+
+<div id="msg-log"></div>
+
+<div id="overworld-panel">
+  <div id="ow-info">
+    <div id="ow-title">Click a castle to select it</div>
+    <div id="ow-sub">You control the blue nation. Select your castle, then attack a neighbor.</div>
+  </div>
+  <button id="end-turn-btn" onclick="endTurn()">END TURN ▶</button>
+</div>
+
+<div id="battle-panel">
+  <div style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-right:8px;">SPAWN:</div>
+  <button class="buy-btn" onclick="buyUnit('archer')">🏹 Archer<span class="cost">50g</span></button>
+  <button class="buy-btn" onclick="buyUnit('knight')">🗡 Knight<span class="cost">80g</span></button>
+  <button class="buy-btn" onclick="buyUnit('catapult')">💣 Catapult<span class="cost">150g</span></button>
+  <span style="font-family:'Cinzel',serif;font-size:13px;color:var(--gold);margin-left:12px;margin-right:4px;">BUILD:</span>
+  <button class="buy-btn" id="btn-tower" onclick="buyUpgrade('tower')">🗼 Tower<span class="cost" id="cost-tower">120g</span></button>
+  <button class="buy-btn" id="btn-farm" onclick="buyUpgrade('farm')">🌾 Farm<span class="cost" id="cost-farm">100g</span></button>
+  <div style="margin-left:auto;" class="stat-pill"><span class="ico">💰</span> Gold: <span class="val" id="battle-gold">200</span></div>
+  <button class="buy-btn" style="margin-left:8px;border-color:var(--red);color:var(--red);" onclick="retreatFromBattle()">🚩 RETREAT</button>
+</div>
+
+<div id="tooltip"></div>
+
+<div id="turn-flash"><span id="turn-flash-text"></span></div>
+
+<div id="end-screen">
+  <h1 id="end-title">VICTORY</h1>
+  <p id="end-sub">You have conquered all nations!</p>
+  <button id="restart-btn" onclick="initGame()">⚔ PLAY AGAIN</button>
+</div>
+
+<script>
+// ===================== GAME ENGINE =====================
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => { resize(); if(G.mode==='overworld') drawOverworld(); });
+
+// ---- CONSTANTS ----
+const PLAYER_NATION = 0;
+const NATION_COLORS = ['#1a6fa8','#c0392b','#2d7a2d','#8b4a00','#6a2d8a'];
+const NATION_NAMES  = ['Ironhold','Crimsonveil','Verdania','Duskforge','Shadowmere'];
+const NATION_FLAG   = ['🔵','🔴','🟢','🟠','🟣'];
+
+// ---- GAME STATE ----
+let G = {};
+
+function initGame() {
+  document.getElementById('end-screen').style.display = 'none';
+  G = {
+    mode: 'overworld',
+    turn: 1,
+    gold: 200,
+    selectedCastle: null,
+    playerAttackedThisTurn: false,
+    castles: [],
+    nations: [],
+    battle: null,
+    msgs: [],
+    pendingDefenses: [],
+  };
+
+  // Nations
+  for(let i=0;i<5;i++){
+    G.nations.push({ id:i, name:NATION_NAMES[i], color:NATION_COLORS[i], alive:true, recentlyAttacked:{} });
+  }
+
+  // Castle layout — 20 castles in roughly geographic clusters
+  const layouts = [
+    // Nation 0 (player - top left area)
+    {nx:0,name:"Irongate",x:0.12,y:0.35},
+    {nx:0,name:"Steelhold",x:0.22,y:0.22},
+    {nx:0,name:"Ironfall",x:0.08,y:0.55},
+    {nx:0,name:"Forgepeak",x:0.28,y:0.42},
+    // Nation 1 (top right)
+    {nx:1,name:"Bloodspire",x:0.68,y:0.18},
+    {nx:1,name:"Crimson Keep",x:0.82,y:0.28},
+    {nx:1,name:"Scarlet Fort",x:0.72,y:0.38},
+    {nx:1,name:"Ashfield",x:0.88,y:0.45},
+    // Nation 2 (bottom left)
+    {nx:2,name:"Verdant Hold",x:0.15,y:0.72},
+    {nx:2,name:"Greenwall",x:0.28,y:0.62},
+    {nx:2,name:"Mossgate",x:0.08,y:0.85},
+    {nx:2,name:"Leafspire",x:0.35,y:0.78},
+    // Nation 3 (center)
+    {nx:3,name:"Duskhaven",x:0.45,y:0.30},
+    {nx:3,name:"Emberhold",x:0.55,y:0.50},
+    {nx:3,name:"Ashgate",x:0.42,y:0.55},
+    {nx:3,name:"Ironveil",x:0.52,y:0.25},
+    // Nation 4 (bottom right)
+    {nx:4,name:"Shadowgate",x:0.72,y:0.65},
+    {nx:4,name:"Dreadspire",x:0.85,y:0.72},
+    {nx:4,name:"Voidfall",x:0.62,y:0.80},
+    {nx:4,name:"Nighthold",x:0.80,y:0.85},
+  ];
+
+  G.castles = layouts.map((l,i)=>({
+    id:i, nation:l.nx, name:l.name,
+    x: l.x, y: l.y,   // fractional
+    hp: 100, maxHp: 100,
+    level: 1,
+  }));
+
+  // Build adjacency (castles within distance threshold)
+  G.castles.forEach(c=>{
+    c.neighbors = [];
+    G.castles.forEach(d=>{
+      if(d.id===c.id) return;
+      const dx=c.x-d.x, dy=c.y-d.y;
+      if(Math.sqrt(dx*dx+dy*dy)<0.25) c.neighbors.push(d.id);
+    });
+  });
+
+  // Player starts with only castle 0
+  G.castles.forEach(c=>{ if(c.nation===PLAYER_NATION && c.id!==0) c.nation=1+Math.floor(Math.random()*4); });
+  // Ensure nation 0 gets castle 0
+  G.castles[0].nation = PLAYER_NATION;
+
+  G.playerAttackedThisTurn = false;
+  showOverworld();
+}
+
+// ===================== OVERWORLD =====================
+const OW_TOP = 42, OW_BOT = 60;
+
+function el(id){ return document.getElementById(id); }
+
+function showOverworld() {
+  G.mode = 'overworld';
+  if(el('battle-panel'))    el('battle-panel').style.display = 'none';
+  if(el('overworld-panel')) el('overworld-panel').style.display = 'flex';
+  if(el('mode-ind'))        el('mode-ind').textContent = 'OVERWORLD';
+  updateStats();
+  updateLegend();
+  drawOverworld();
+}
+
+function castleScreenPos(c) {
+  const W = canvas.width, H = canvas.height;
+  const usableH = H - OW_TOP - OW_BOT;
+  return { x: c.x * W, y: OW_TOP + c.y * usableH };
+}
+
+function drawOverworld() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  const bg = ctx.createRadialGradient(W*0.5,H*0.5,0,W*0.5,H*0.5,Math.max(W,H)*0.7);
+  bg.addColorStop(0,'#1a1208');
+  bg.addColorStop(1,'#060402');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // Grid lines (map texture)
+  ctx.strokeStyle = 'rgba(200,169,110,0.04)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=50){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H;y+=50){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  // Draw connections
+  G.castles.forEach(c=>{
+    const p = castleScreenPos(c);
+    c.neighbors.forEach(nid=>{
+      if(nid<=c.id) return;
+      const n = G.castles[nid];
+      const q = castleScreenPos(n);
+      const sameNation = c.nation === n.nation;
+      ctx.beginPath();
+      ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y);
+      ctx.strokeStyle = sameNation ? 'rgba(200,169,110,0.25)' : 'rgba(200,169,110,0.08)';
+      ctx.lineWidth = sameNation ? 2 : 1;
+      ctx.setLineDash(sameNation ? [] : [4,4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+  });
+
+  // Draw castles
+  G.castles.forEach(c=>{
+    const p = castleScreenPos(c);
+    const col = NATION_COLORS[c.nation];
+    const isPlayer = c.nation === PLAYER_NATION;
+    const isSelected = G.selectedCastle === c.id;
+
+    // Glow
+    const glow = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,40);
+    glow.addColorStop(0, col+'44');
+    glow.addColorStop(1, col+'00');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(p.x,p.y,40,0,Math.PI*2); ctx.fill();
+
+    // Selection ring
+    if(isSelected){
+      ctx.strokeStyle = '#ffd700';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6,3]);
+      ctx.beginPath(); ctx.arc(p.x,p.y,28,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Castle icon
+    drawCastleIcon(ctx, p.x, p.y, 22, col, isPlayer);
+
+    // HP bar
+    const bw = 44, bh = 5;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(p.x-bw/2, p.y+28, bw, bh);
+    ctx.fillStyle = col;
+    ctx.fillRect(p.x-bw/2, p.y+28, bw*(c.hp/c.maxHp), bh);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(p.x-bw/2, p.y+28, bw, bh);
+
+    // Name
+    ctx.fillStyle = '#f5ead8';
+    ctx.font = "bold 11px 'Cinzel', serif";
+    ctx.textAlign = 'center';
+    ctx.fillText(c.name, p.x, p.y+44);
+
+    // Attack highlight (for selected castle's attackable neighbors)
+    if(G.selectedCastle !== null && !G.playerAttackedThisTurn){
+      const sel = G.castles[G.selectedCastle];
+      if(sel && sel.nation === PLAYER_NATION && c.nation !== PLAYER_NATION && sel.neighbors.includes(c.id)){
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([]);
+        ctx.beginPath(); ctx.arc(p.x,p.y,30,0,Math.PI*2); ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,68,68,0.08)';
+        ctx.beginPath(); ctx.arc(p.x,p.y,30,0,Math.PI*2); ctx.fill();
+      }
+    }
+  });
+}
+
+function drawCastleIcon(ctx, x, y, r, color, isPlayer){
+  // Base
+  ctx.fillStyle = color;
+  ctx.fillRect(x-r*0.7, y-r*0.4, r*1.4, r*0.9);
+  // Towers
+  const tw=r*0.35, th=r*0.55;
+  [-r*0.5, 0, r*0.5].forEach(ox=>{
+    ctx.fillRect(x+ox-tw/2, y-r*0.4-th, tw, th);
+    // Battlements
+    for(let i=0;i<3;i++){
+      ctx.fillRect(x+ox-tw/2+i*(tw/3), y-r*0.4-th-r*0.15, tw/3-1, r*0.15);
+    }
+  });
+  // Gate
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.arc(x, y+r*0.1, r*0.22, Math.PI, 0);
+  ctx.fill();
+  ctx.fillRect(x-r*0.22, y+r*0.1, r*0.44, r*0.38);
+  // Flag
+  if(isPlayer){
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(x, y-r*0.4-th-r*0.2, 2, r*0.35);
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath(); ctx.moveTo(x+2,y-r*0.4-th-r*0.2); ctx.lineTo(x+r*0.4, y-r*0.4-th-r*0.04); ctx.lineTo(x+2, y-r*0.4-th+r*0.1); ctx.fill();
+  }
+}
+
+// ---- OVERWORLD INPUT ----
+canvas.addEventListener('click', e=>{
+  if(G.mode !== 'overworld') return;
+  const W=canvas.width, H=canvas.height;
+  const usableH = H - OW_TOP - OW_BOT;
+  const mx=e.clientX, my=e.clientY;
+
+  let hit = null;
+  G.castles.forEach(c=>{
+    const p = castleScreenPos(c);
+    if(Math.hypot(mx-p.x,my-p.y)<30) hit=c;
+  });
+
+  if(!hit){ G.selectedCastle=null; updateOwPanel(); drawOverworld(); return; }
+
+  if(G.selectedCastle !== null){
+    const sel = G.castles[G.selectedCastle];
+    if(sel.nation===PLAYER_NATION && hit.nation!==PLAYER_NATION && sel.neighbors.includes(hit.id)){
+      if(G.playerAttackedThisTurn){ addMsg("You've already attacked this turn!", 'bad'); return; }
+      G.selectedCastle=null;
+      startBattle(sel, hit, true);
+      return;
+    }
+  }
+
+  if(hit.nation===PLAYER_NATION){
+    G.selectedCastle=hit.id;
+    if(el('ow-title')) el('ow-title').textContent = `⚔ ${hit.name} selected`;
+    if(el('ow-sub'))   el('ow-sub').textContent = 'Click a highlighted enemy castle to attack!';
+    drawOverworld();
+  } else {
+    G.selectedCastle=null;
+    if(el('ow-title')) el('ow-title').textContent = `🏰 ${hit.name} — ${NATION_NAMES[hit.nation]}`;
+    if(el('ow-sub'))   el('ow-sub').textContent = `HP: ${hit.hp}/${hit.maxHp} | ${NATION_FLAG[hit.nation]}`;
+    drawOverworld();
+  }
+});
+
+function updateOwPanel(){
+  if(el('ow-title')) el('ow-title').textContent = 'Click a castle to select it';
+  if(el('ow-sub'))   el('ow-sub').textContent = 'Select your castle, then click an adjacent enemy to attack.';
+}
+
+function updateStats(){
+  const playerCastles = G.castles.filter(c=>c.nation===PLAYER_NATION).length;
+  if(el('stat-castles')) el('stat-castles').textContent = playerCastles;
+  if(el('stat-gold'))    el('stat-gold').textContent = G.gold;
+  if(el('stat-turn'))    el('stat-turn').textContent = G.turn;
+  if(el('battle-gold'))  el('battle-gold').textContent = G.gold;
+  // Update build costs if in battle
+  if(G.battle){
+    const side = getPlayerSide();
+    if(side){
+      if(el('cost-tower')) el('cost-tower').textContent = structureCost(side,'tower')+'g';
+      if(el('cost-farm'))  el('cost-farm').textContent  = structureCost(side,'farm')+'g';
+    }
+  }
+}
+
+function updateLegend(){
+  const leg = el('legend');
+  if(!leg) return;
+  leg.innerHTML = '';
+  G.nations.forEach(n=>{
+    if(!n.alive) return;
+    const count = G.castles.filter(c=>c.nation===n.id).length;
+    const div = document.createElement('div');
+    div.className='leg-item';
+    div.innerHTML=`<div class="leg-dot" style="background:${n.color}"></div><div class="leg-name">${n.name}</div><div class="leg-castles">${count}🏰</div>`;
+    leg.appendChild(div);
+  });
+}
+
+// ---- END TURN ----
+function endTurn(){
+  G.turn++;
+  G.playerAttackedThisTurn = false;
+  G.selectedCastle = null;
+
+  // Collect pending defense battles (AI attacks on player castles)
+  G.pendingDefenses = G.pendingDefenses || [];
+
+  // AI turns
+  const liveNations = G.nations.filter(n=>n.alive && n.id!==PLAYER_NATION);
+  liveNations.forEach(nation=>{
+    const myCastles = G.castles.filter(c=>c.nation===nation.id);
+    if(myCastles.length===0) return;
+
+    let candidates = [];
+    myCastles.forEach(c=>{
+      c.neighbors.forEach(nid=>{
+        const t = G.castles[nid];
+        if(t.nation!==nation.id){
+          const revenge = nation.recentlyAttacked[t.nation] ? 0.35 : 0;
+          candidates.push({from:c, to:t, weight: 0.4 + revenge});
+        }
+      });
+    });
+    candidates.forEach(cand=>{
+      if(Math.random() < cand.weight && !nation._attacked){
+        nation._attacked = true;
+        if(cand.to.nation === PLAYER_NATION){
+          // Queue as a player defense battle instead of auto-resolving
+          G.pendingDefenses.push({ from: cand.from, to: cand.to, attackerNation: nation });
+          addMsg(`⚠️ ${nation.name} is attacking your ${cand.to.name}! Prepare to defend!`, 'bad');
+        } else {
+          runAIBattle(cand.from, cand.to, nation);
+        }
+      }
+    });
+    delete nation._attacked;
+    nation.recentlyAttacked = {};
+  });
+
+  // Income
+  const myFarms = G.castles.filter(c=>c.nation===PLAYER_NATION).length * 10;
+  G.gold += 30 + myFarms;
+  G.gold = Math.min(G.gold, 9999);
+
+  flashTurn();
+  updateStats();
+  updateLegend();
+  checkWinLose();
+  drawOverworld();
+
+  // If there are pending defenses, kick off the first one after a short delay
+  if(G.pendingDefenses.length > 0){
+    setTimeout(processNextDefense, 800);
+  }
+}
+
+function processNextDefense(){
+  if(!G.pendingDefenses || G.pendingDefenses.length === 0) return;
+  const def = G.pendingDefenses.shift();
+  // Check the castle is still the player's (a previous defense may have changed it)
+  if(def.to.nation !== PLAYER_NATION){
+    // Skip, process next
+    if(G.pendingDefenses.length > 0) setTimeout(processNextDefense, 400);
+    return;
+  }
+  // Start a real battle — player defends (player is on the RIGHT, attacker on the LEFT)
+  showDefenseBanner(def, ()=>{
+    startBattle(def.from, def.to, false); // false = player is right side (defender)
+  });
+}
+
+function showDefenseBanner(def, callback){
+  // Flash a warning overlay then launch battle
+  const banner = document.createElement('div');
+  banner.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:90;font-family:'Cinzel',serif;gap:16px;`;
+  banner.innerHTML = `
+    <div style="font-size:13px;letter-spacing:3px;color:#c0392b;opacity:0.8;">INCOMING ATTACK</div>
+    <div style="font-size:36px;font-weight:900;color:#c0392b;text-shadow:0 0 30px rgba(192,57,43,0.8);letter-spacing:4px;">⚔ DEFEND!</div>
+    <div style="font-size:18px;color:#f5ead8;">${def.attackerNation.name} attacks <span style="color:#f0c040">${def.to.name}</span></div>
+    <div style="font-size:13px;color:#c8a96e;margin-top:4px;">Click to begin the defense...</div>
+  `;
+  banner.style.cursor = 'pointer';
+  document.body.appendChild(banner);
+  banner.addEventListener('click', ()=>{ banner.remove(); callback(); });
+  // Also auto-start after 3s
+  setTimeout(()=>{ if(banner.parentNode){ banner.remove(); callback(); } }, 3000);
+}
+
+function runAIBattle(from, to, attackerNation){
+  // Quick sim
+  const attackerStr = from.hp * (0.8 + Math.random()*0.4);
+  const defenderStr  = to.hp   * (0.8 + Math.random()*0.4);
+  const attackerWins = attackerStr > defenderStr;
+
+  if(attackerWins){
+    const prevNation = to.nation;
+    to.nation = attackerNation.id;
+    to.hp = Math.max(20, to.hp - 30);
+    addMsg(`${attackerNation.name} captured ${to.name}!`, 'bad');
+    if(prevNation === PLAYER_NATION){
+      addMsg(`You lost ${to.name}!`, 'bad');
+      // Mark revenge
+      G.nations[PLAYER_NATION].recentlyAttacked[attackerNation.id] = true;
+    }
+  } else {
+    to.hp = Math.max(15, to.hp - 20);
+    from.hp = Math.max(15, from.hp - 20);
+    addMsg(`${attackerNation.name} attacked ${to.name} — repelled!`);
+    if(to.nation === PLAYER_NATION){
+      addMsg(`${attackerNation.name} attacked your ${to.name}!`, 'bad');
+      G.nations[PLAYER_NATION].recentlyAttacked[attackerNation.id] = true;
+    }
+  }
+
+  checkNationsDead();
+}
+
+function checkNationsDead(){
+  G.nations.forEach(n=>{
+    if(n.id===PLAYER_NATION) return;
+    const count = G.castles.filter(c=>c.nation===n.id).length;
+    if(count===0 && n.alive){
+      n.alive = false;
+      addMsg(`🏴 ${n.name} has been destroyed!`, 'bad');
+    }
+  });
+}
+
+function checkWinLose(){
+  const playerCastles = G.castles.filter(c=>c.nation===PLAYER_NATION).length;
+  if(playerCastles===0){
+    const es = el('end-screen'); if(!es) return;
+    es.className='defeat'; es.style.display='flex';
+    if(el('end-title')) el('end-title').textContent='DEFEATED';
+    if(el('end-sub'))   el('end-sub').textContent='Your kingdom has fallen...';
+    return;
+  }
+  const enemies = G.nations.filter(n=>n.id!==PLAYER_NATION && n.alive);
+  if(enemies.length===0){
+    const es = el('end-screen'); if(!es) return;
+    es.className='victory'; es.style.display='flex';
+    if(el('end-title')) el('end-title').textContent='VICTORY';
+    if(el('end-sub'))   el('end-sub').textContent='All nations bow before you!';
+  }
+}
+
+function flashTurn(){
+  const flash = el('turn-flash');
+  const flashTxt = el('turn-flash-text');
+  if(!flash || !flashTxt) return;
+  flashTxt.textContent = `TURN ${G.turn}`;
+  flash.style.transition='none'; flash.style.opacity='1';
+  setTimeout(()=>{ flash.style.transition='opacity 1s'; flash.style.opacity='0'; },500);
+}
+
+// ===================== BATTLE ENGINE =====================
+const CASTLE_W = 120, CASTLE_H = 160;
+const GROUND_Y_FRAC = 0.72;
+const BATTLE_TOP = 42, BATTLE_BOT = 60;
+
+function startBattle(attackerCastle, defenderCastle, playerAttacks){
+  G.mode = 'battle';
+  G.playerAttackedThisTurn = true;
+  if(el('battle-panel'))    el('battle-panel').style.display = 'flex';
+  if(el('overworld-panel')) el('overworld-panel').style.display = 'none';
+  if(el('mode-ind'))        el('mode-ind').textContent = 'BATTLE';
+
+  const playerLeft = playerAttacks;
+
+  G.battle = {
+    attacker: attackerCastle,
+    defender: defenderCastle,
+    playerLeft,
+    playerNation: PLAYER_NATION,
+    leftNation:  playerLeft ? PLAYER_NATION : defenderCastle.nation,
+    rightNation: playerLeft ? defenderCastle.nation : PLAYER_NATION,
+
+    // Battle castles
+    left: {
+      hp: 300, maxHp: 300,
+      gold: playerLeft ? G.gold : 150,
+      structures: [],
+      nation: playerLeft ? PLAYER_NATION : defenderCastle.nation,
+      isPlayer: playerLeft,
+      spawnTimer: 0, spawnInterval: 180,
+      goldTimer: 0, goldInterval: 90,
+    },
+    right: {
+      hp: 300, maxHp: 300,
+      gold: playerLeft ? 150 : G.gold,
+      structures: [],
+      nation: playerLeft ? defenderCastle.nation : PLAYER_NATION,
+      isPlayer: !playerLeft,
+      spawnTimer: 0, spawnInterval: 180,
+      goldTimer: 0, goldInterval: 90,
+    },
+    units: [],
+    projectiles: [],
+    particles: [],
+    over: false,
+    winner: null,
+    frame: 0,
+    resultApplied: false,
+  };
+
+  // Place initial structures
+  const B = G.battle;
+  placeStructure(B.left, 'tower', false);
+  placeStructure(B.right, 'tower', true);
+
+  updateStats();
+  battleLoop();
+}
+
+function getGroundY(){
+  return BATTLE_TOP + (canvas.height - BATTLE_TOP - BATTLE_BOT) * GROUND_Y_FRAC;
+}
+
+function getCastleX(side){
+  if(side==='left') return 90;
+  return canvas.width - 90;
+}
+
+function structureCost(side, type){
+  const base = type==='tower' ? 120 : 100;
+  const existing = side.structures.filter(s=>s.type===type).length;
+  return base + existing * 50;
+}
+
+function placeStructure(side, type, isRight){
+  const gY = getGroundY();
+  const cx = isRight ? getCastleX('right') : getCastleX('left');
+  const offset = isRight ? -1 : 1;
+  const dist = 75 + side.structures.length * 48;
+  side.structures.push({
+    type, hp: type==='tower'?150:80, maxHp: type==='tower'?150:80,
+    x: cx + offset * dist,
+    y: gY,
+    isRight,
+    nation: side.nation,
+  });
+}
+
+// Unit definitions
+const UNIT_DEFS = {
+  soldier: { hp:40, speed:0.9, damage:8, range:20, reload:60, cost:0, size:12, color:'#ccc', symbol:'⚔', atkRange:24, isRanged:false },
+  archer:  { hp:25, speed:0.7, damage:12, range:220, reload:100, cost:50, size:10, color:'#96c', symbol:'🏹', atkRange:220, isRanged:true },
+  knight:  { hp:90, speed:1.1, damage:20, range:24, reload:80, cost:80, size:15, color:'#8af', symbol:'🗡', atkRange:28, isRanged:false },
+  catapult:{ hp:60, speed:0.35, damage:50, range:350, reload:200, cost:150, size:18, color:'#fa8', symbol:'💣', atkRange:350, isRanged:true },
+};
+
+function spawnUnit(side, type, isRight){
+  const def = UNIT_DEFS[type];
+  const gY = getGroundY();
+  const cx = isRight ? getCastleX('right') : getCastleX('left');
+  const offsetX = isRight ? -CASTLE_W*0.5 : CASTLE_W*0.5;
+  G.battle.units.push({
+    type, isRight,
+    x: cx + offsetX,
+    y: gY - def.size*0.5,
+    hp: def.hp, maxHp: def.hp,
+    speed: def.speed * (isRight ? -1 : 1),
+    damage: def.damage,
+    atkRange: def.atkRange,
+    reload: def.reload, reloadTimer: 0,
+    size: def.size,
+    color: NATION_COLORS[side.nation],
+    symbol: def.symbol,
+    isRanged: def.isRanged,
+    alive: true,
+    state: 'walk',
+    animFrame: Math.random()*10,
+  });
+}
+
+let battleRAF = null;
+function battleLoop(){
+  if(G.mode !== 'battle') return;
+  cancelAnimationFrame(battleRAF);
+  battleRAF = requestAnimationFrame(battleLoop);
+  updateBattle();
+  drawBattle();
+}
+
+function updateBattle(){
+  const B = G.battle;
+  if(B.over){
+    if(!B.resultApplied){
+      B.resultApplied = true;
+      setTimeout(()=>applyBattleResult(), 2000);
+    }
+    // Still update particles
+    updateParticles(B);
+    return;
+  }
+  B.frame++;
+
+  const gY = getGroundY();
+
+  // Gold income
+  ['left','right'].forEach(s=>{
+    const side = B[s];
+    side.goldTimer++;
+    if(side.goldTimer >= side.goldInterval){
+      side.goldTimer=0;
+      const farmBonus = side.structures.filter(st=>st.type==='farm'&&st.hp>0).length * 3;
+      const inc = 4 + farmBonus;
+      side.gold = Math.min(side.gold + inc, 9999);
+      if(side.isPlayer){ G.gold = side.gold; updateStats(); }
+    }
+
+    // AI spawn + build
+    if(!side.isPlayer){
+      side.spawnTimer++;
+      if(side.spawnTimer >= side.spawnInterval){
+        side.spawnTimer = 0;
+        const types = ['soldier','soldier','soldier','archer','knight'];
+        const t = types[Math.floor(Math.random()*types.length)];
+        const def = UNIT_DEFS[t];
+        if(side.gold >= def.cost){ side.gold -= def.cost; spawnUnit(side, t, s==='right'); }
+        else spawnUnit(side, 'soldier', s==='right');
+      }
+      // AI builds structures every ~600 frames if it has gold, max 4 structures
+      if(B.frame % 600 === (s==='right'?300:0) && side.structures.length < 4){
+        const tCost = structureCost(side,'tower');
+        const fCost = structureCost(side,'farm');
+        // Prefer tower if low on structures, else mix
+        const wantType = side.structures.filter(x=>x.type==='tower').length <= side.structures.filter(x=>x.type==='farm').length ? 'tower' : 'farm';
+        const cost = wantType==='tower' ? tCost : fCost;
+        if(side.gold >= cost){ side.gold -= cost; placeStructure(side, wantType, s==='right'); }
+      }
+    } else {
+      // Player auto-spawns soldiers too
+      side.spawnTimer++;
+      if(side.spawnTimer >= side.spawnInterval){
+        side.spawnTimer = 0;
+        spawnUnit(side, 'soldier', s==='right');
+      }
+    }
+  });
+
+  // Update units
+  B.units.forEach(u=>{
+    if(!u.alive) return;
+    u.animFrame++;
+    u.reloadTimer = Math.max(0, u.reloadTimer-1);
+
+    const enemies = B.units.filter(e=>e.alive && e.isRight!==u.isRight);
+    const enemySide = u.isRight ? B.left : B.right;
+    const enemyCastleX = u.isRight ? getCastleX('left') : getCastleX('right');
+    // Enemy structures that are alive and in front of this unit (between unit and enemy castle)
+    const enemyStructures = enemySide.structures.filter(s=>s.hp>0 && (
+      u.isRight ? s.x > enemyCastleX && s.x < u.x : s.x < enemyCastleX && s.x > u.x
+    ));
+
+    // Find closest enemy unit
+    let closestEnemy = null, closestDist = Infinity;
+    enemies.forEach(e=>{
+      const d = Math.abs(u.x - e.x);
+      if(d < closestDist){ closestDist=d; closestEnemy=e; }
+    });
+
+    // Find closest enemy structure in the path
+    let closestStruct = null, closestStructDist = Infinity;
+    enemyStructures.forEach(s=>{
+      const d = Math.abs(u.x - s.x);
+      if(d < closestStructDist){ closestStructDist=d; closestStruct=s; }
+    });
+
+    const castleDist = Math.abs(u.x - enemyCastleX);
+
+    // Priority: enemy unit > enemy structure in path > castle
+    const meleeRange = 28;
+    const structTarget = closestStruct && closestStructDist < (u.isRanged ? u.atkRange : meleeRange+10);
+    const unitTarget   = closestEnemy  && closestDist      <= u.atkRange;
+
+    if(unitTarget){
+      if(u.reloadTimer<=0){
+        u.reloadTimer = u.reload;
+        if(u.isRanged){
+          B.projectiles.push({ x:u.x, y:u.y-u.size, tx:closestEnemy.x, ty:closestEnemy.y-closestEnemy.size, target:closestEnemy, targetCastle:null, targetStruct:null, damage:u.damage, speed:4, type:u.type, alive:true });
+        } else {
+          closestEnemy.hp -= u.damage;
+          spawnParticle(B, closestEnemy.x, closestEnemy.y, '#f44');
+          if(closestEnemy.hp<=0){ closestEnemy.alive=false; spawnParticle(B,closestEnemy.x,closestEnemy.y,'#f80',8); }
+        }
+      }
+    } else if(structTarget){
+      // Attack the structure blocking the path
+      if(u.reloadTimer<=0){
+        u.reloadTimer = u.reload;
+        if(u.isRanged){
+          B.projectiles.push({ x:u.x, y:u.y-u.size, tx:closestStruct.x, ty:closestStruct.y-30, target:null, targetCastle:null, targetStruct:closestStruct, damage:u.damage, speed:4, type:u.type, alive:true });
+        } else {
+          closestStruct.hp -= u.damage;
+          spawnParticle(B, closestStruct.x, closestStruct.y-20, '#f44');
+          if(closestStruct.hp<=0){ closestStruct.hp=0; spawnParticle(B,closestStruct.x,closestStruct.y-20,'#f80',10); }
+        }
+      }
+      // Block movement if melee and structure is right ahead
+      if(!u.isRanged && closestStructDist < meleeRange+10) { /* stand still, attacking */ }
+      else u.x += u.speed;
+    } else if(castleDist <= (u.isRanged ? u.atkRange : meleeRange)){
+      if(u.reloadTimer<=0){
+        u.reloadTimer = u.reload;
+        if(u.isRanged){
+          B.projectiles.push({ x:u.x, y:u.y-u.size, tx:enemyCastleX, ty:gY-60, target:null, targetCastle:enemySide, targetStruct:null, damage:u.damage, speed:4, type:u.type, alive:true });
+        } else {
+          enemySide.hp -= u.damage*0.3;
+          spawnParticle(B, enemyCastleX, gY-40,'#f80');
+        }
+      }
+    } else {
+      u.x += u.speed;
+    }
+
+    const lo = getCastleX('left') - 10, hi = getCastleX('right') + 10;
+    u.x = Math.max(lo, Math.min(hi, u.x));
+    if(u.hp<=0){ u.alive=false; spawnParticle(B,u.x,u.y,'#f80',5); }
+  });
+
+  // Remove dead
+  B.units = B.units.filter(u=>u.alive);
+
+  // Projectiles
+  B.projectiles.forEach(p=>{
+    if(!p.alive) return;
+    const dx = p.tx-p.x, dy = p.ty-p.y;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    if(dist < p.speed+4){
+      p.alive=false;
+      if(p.target && p.target.alive){ p.target.hp -= p.damage; spawnParticle(B,p.tx,p.ty,'#f44',4); if(p.target.hp<=0){p.target.alive=false;spawnParticle(B,p.target.x,p.target.y,'#f80',8);} }
+      if(p.targetStruct && p.targetStruct.hp>0){ p.targetStruct.hp -= p.damage; spawnParticle(B,p.tx,p.ty,'#f44',4); if(p.targetStruct.hp<=0){p.targetStruct.hp=0;spawnParticle(B,p.tx,p.ty,'#f80',10);} }
+      if(p.targetCastle){ p.targetCastle.hp -= p.damage*0.5; spawnParticle(B,p.tx,p.ty,'#f80',6); }
+      if(p.type==='catapult') spawnParticle(B, p.tx, p.ty, '#f60', 12);
+    } else {
+      p.x += (dx/dist)*p.speed;
+      p.y += (dy/dist)*p.speed;
+    }
+  });
+  B.projectiles = B.projectiles.filter(p=>p.alive);
+
+  // Tower attacks
+  ['left','right'].forEach(s=>{
+    const side = B[s];
+    const isRight = s==='right';
+    side.structures.forEach(st=>{
+      if(st.type!=='tower'||st.hp<=0) return;
+      const enemies = B.units.filter(u=>u.alive && u.isRight!==isRight && Math.abs(u.x-st.x)<130);
+      if(enemies.length>0 && B.frame%60===0){
+        const target = enemies[0];
+        B.projectiles.push({ x:st.x, y:st.y-40, tx:target.x, ty:target.y, target, targetCastle:null, damage:8, speed:5, type:'arrow', alive:true });
+      }
+    });
+  });
+
+  updateParticles(B);
+
+  // Check over
+  if(B.left.hp<=0){ B.over=true; B.winner='right'; }
+  if(B.right.hp<=0){ B.over=true; B.winner='left'; }
+}
+
+function spawnParticle(B, x, y, color, count=3){
+  for(let i=0;i<count;i++){
+    B.particles.push({ x, y, vx:(Math.random()-0.5)*4, vy:-(Math.random()*3+1), life:1, color, alive:true });
+  }
+}
+function updateParticles(B){
+  B.particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.1; p.life-=0.03; if(p.life<=0)p.alive=false; });
+  B.particles = B.particles.filter(p=>p.alive);
+}
+
+function drawBattle(){
+  const W=canvas.width, H=canvas.height;
+  const B = G.battle;
+  const gY = getGroundY();
+  const usableH = H - BATTLE_TOP - BATTLE_BOT;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0,BATTLE_TOP,0,gY);
+  sky.addColorStop(0,'#1a1230');
+  sky.addColorStop(1,'#4a3060');
+  ctx.fillStyle=sky; ctx.fillRect(0,BATTLE_TOP,W,gY-BATTLE_TOP);
+
+  // Sun/moon
+  ctx.fillStyle='rgba(255,200,80,0.15)';
+  ctx.beginPath(); ctx.arc(W*0.5, BATTLE_TOP+60, 50,0,Math.PI*2); ctx.fill();
+
+  // Clouds
+  [0.25,0.5,0.75].forEach((fx,i)=>{
+    ctx.fillStyle='rgba(255,255,255,0.05)';
+    ctx.beginPath(); ctx.ellipse(W*fx, BATTLE_TOP+80+(i*30), 70,25,0,0,Math.PI*2); ctx.fill();
+  });
+
+  // Ground
+  const gr = ctx.createLinearGradient(0,gY,0,H-BATTLE_BOT);
+  gr.addColorStop(0,'#2d4a1e'); gr.addColorStop(1,'#1a2e10');
+  ctx.fillStyle=gr; ctx.fillRect(0,gY,W,H-BATTLE_BOT-gY);
+
+  // Draw structures
+  ['left','right'].forEach(s=>{
+    B[s].structures.forEach(st=>drawStructure(ctx,st,gY));
+  });
+
+  // Draw castles
+  drawBattleCastle(ctx, B.left,  false, gY);
+  drawBattleCastle(ctx, B.right, true,  gY);
+
+  // Units
+  B.units.forEach(u=>drawUnit(ctx,u));
+
+  // Projectiles
+  B.projectiles.forEach(p=>{
+    ctx.fillStyle = p.type==='catapult' ? '#f80' : '#ddd';
+    ctx.beginPath();
+    const r = p.type==='catapult'?6:3;
+    ctx.arc(p.x,p.y,r,0,Math.PI*2); ctx.fill();
+    if(p.type==='catapult'){
+      ctx.fillStyle='rgba(255,120,0,0.3)';
+      ctx.beginPath(); ctx.arc(p.x,p.y,10,0,Math.PI*2); ctx.fill();
+    }
+  });
+
+  // Particles
+  B.particles.forEach(p=>{
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // HP bars top
+  drawBattleHPBars(W, H, B, gY);
+
+  // Battle over overlay
+  if(B.over){
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(0,0,W,H);
+    const playerWon = (B.playerLeft && B.winner==='left') || (!B.playerLeft && B.winner==='right');
+    ctx.font="bold 52px 'Cinzel',serif";
+    ctx.textAlign='center';
+    ctx.fillStyle = playerWon ? '#ffd700' : '#c0392b';
+    let headline, subline;
+    if(B.playerLeft){
+      headline = playerWon ? 'VICTORY!' : 'REPELLED!';
+      subline  = playerWon ? `You captured ${B.defender.name}!` : `${B.defender.name} held firm...`;
+    } else {
+      headline = playerWon ? 'DEFENDED!' : 'FALLEN!';
+      subline  = playerWon ? `${B.defender.name} holds!` : `${B.defender.name} has been captured...`;
+    }
+    ctx.fillText(headline, W/2, H/2);
+    ctx.font="20px 'Cinzel',serif";
+    ctx.fillStyle='#f5ead8';
+    ctx.fillText(subline, W/2, H/2+44);
+  }
+}
+
+function drawBattleCastle(ctx, side, isRight, gY){
+  const x = isRight ? getCastleX('right') : getCastleX('left');
+  const col = NATION_COLORS[side.nation];
+  const hpFrac = side.hp / side.maxHp;
+
+  // Damage effect
+  if(hpFrac < 0.4){
+    ctx.fillStyle='rgba(255,100,0,0.07)';
+    ctx.fillRect(x-70,gY-CASTLE_H-10,140,CASTLE_H+10);
+  }
+
+  // Main wall
+  ctx.fillStyle = darken(col, hpFrac);
+  ctx.fillRect(x-CASTLE_W/2, gY-CASTLE_H, CASTLE_W, CASTLE_H);
+
+  // Battlements top
+  for(let i=0;i<6;i++){
+    if(i%2===0){
+      ctx.fillStyle = darken(col, hpFrac*0.9);
+      ctx.fillRect(x-CASTLE_W/2+i*(CASTLE_W/6), gY-CASTLE_H-18, CASTLE_W/6-3, 18);
+    }
+  }
+
+  // Towers
+  [-CASTLE_W*0.42, CASTLE_W*0.42].forEach(ox=>{
+    ctx.fillStyle = darken(col, hpFrac*0.85);
+    ctx.fillRect(x+ox-18, gY-CASTLE_H-40, 36, CASTLE_H+40);
+    // Tower battlements
+    for(let i=0;i<4;i++){
+      if(i%2===0){
+        ctx.fillRect(x+ox-18+i*9, gY-CASTLE_H-55, 9-2, 15);
+      }
+    }
+    // Arrow slits
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    ctx.fillRect(x+ox-4, gY-CASTLE_H-20, 8, 14);
+    ctx.fillRect(x+ox-4, gY-CASTLE_H+10, 8, 14);
+  });
+
+  // Gate arch
+  ctx.fillStyle='rgba(0,0,0,0.7)';
+  ctx.beginPath();
+  ctx.arc(x, gY-28, 22, Math.PI, 0);
+  ctx.fill();
+  ctx.fillRect(x-22, gY-28, 44, 28);
+
+  // Windows
+  ctx.fillStyle='rgba(255,200,80,0.3)';
+  [[-28,-80],[28,-80],[0,-100],[-28,-50],[28,-50]].forEach(([ox,oy])=>{
+    ctx.fillRect(x+ox-5,gY+oy-8,10,14);
+  });
+
+  // Flag
+  ctx.fillStyle='#444';
+  ctx.fillRect(x-1, gY-CASTLE_H-80, 2, 30);
+  ctx.fillStyle = col;
+  if(isRight){ ctx.beginPath(); ctx.moveTo(x-1,gY-CASTLE_H-80); ctx.lineTo(x-22,gY-CASTLE_H-68); ctx.lineTo(x-1,gY-CASTLE_H-57); ctx.fill(); }
+  else { ctx.beginPath(); ctx.moveTo(x+1,gY-CASTLE_H-80); ctx.lineTo(x+22,gY-CASTLE_H-68); ctx.lineTo(x+1,gY-CASTLE_H-57); ctx.fill(); }
+
+  // Crack effects for damage
+  if(hpFrac < 0.6){
+    ctx.strokeStyle='rgba(0,0,0,0.4)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(x-20,gY-CASTLE_H+20); ctx.lineTo(x-5,gY-CASTLE_H+60); ctx.lineTo(x+10,gY-CASTLE_H+80);
+    ctx.stroke();
+  }
+}
+
+function darken(col, frac){
+  // Parse hex color and darken by frac
+  const r=parseInt(col.slice(1,3),16);
+  const g=parseInt(col.slice(3,5),16);
+  const b=parseInt(col.slice(5,7),16);
+  const f=Math.max(0.3,frac);
+  return `rgb(${Math.round(r*f)},${Math.round(g*f)},${Math.round(b*f)})`;
+}
+
+function drawStructure(ctx, st, gY){
+  const col = st.nation !== undefined ? NATION_COLORS[st.nation] : '#888';
+  if(st.hp<=0){
+    // Ruins
+    ctx.fillStyle='#444';
+    ctx.fillRect(st.x-14,gY-16,28,16);
+    ctx.fillStyle='#555';
+    ctx.fillRect(st.x-8,gY-24,10,10);
+    ctx.fillRect(st.x+2,gY-20,8,8);
+    return;
+  }
+  if(st.type==='tower'){
+    // Tower body
+    ctx.fillStyle='#777';
+    ctx.fillRect(st.x-10,gY-55,20,55);
+    ctx.fillStyle='#999';
+    ctx.fillRect(st.x-13,gY-65,26,12);
+    // Battlements
+    for(let i=0;i<4;i++){ if(i%2===0) ctx.fillRect(st.x-13+i*7,gY-72,7,10); }
+    // Arrow slit
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.fillRect(st.x-3,gY-48,6,12);
+    // Flag pole
+    ctx.fillStyle='#555';
+    ctx.fillRect(st.x-1,gY-90,2,22);
+    // Flag
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(st.x+1,gY-90); ctx.lineTo(st.x+14,gY-82); ctx.lineTo(st.x+1,gY-74);
+    ctx.fill();
+    // HP bar
+    const bw=26;
+    ctx.fillStyle='#300'; ctx.fillRect(st.x-bw/2,gY-100,bw,4);
+    ctx.fillStyle='#f80'; ctx.fillRect(st.x-bw/2,gY-100,bw*(st.hp/st.maxHp),4);
+  } else {
+    // Farm ground
+    ctx.fillStyle='#5a7a28';
+    ctx.fillRect(st.x-22,gY-8,44,8);
+    // Crop rows
+    for(let i=0;i<5;i++){
+      ctx.fillStyle= i%2===0 ? '#7ab040' : '#5a9030';
+      ctx.fillRect(st.x-20+i*9,gY-18,6,10);
+    }
+    // Barn
+    ctx.fillStyle='#7a3a10';
+    ctx.fillRect(st.x-9,gY-26,18,18);
+    ctx.fillStyle='#963a14';
+    ctx.beginPath(); ctx.moveTo(st.x-11,gY-26); ctx.lineTo(st.x,gY-40); ctx.lineTo(st.x+11,gY-26); ctx.fill();
+    // Flag pole on barn
+    ctx.fillStyle='#555';
+    ctx.fillRect(st.x-1,gY-54,2,16);
+    // Flag
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(st.x+1,gY-54); ctx.lineTo(st.x+12,gY-47); ctx.lineTo(st.x+1,gY-40);
+    ctx.fill();
+    // HP bar
+    const bw=26;
+    ctx.fillStyle='#300'; ctx.fillRect(st.x-bw/2,gY-62,bw,4);
+    ctx.fillStyle='#4a4'; ctx.fillRect(st.x-bw/2,gY-62,bw*(st.hp/st.maxHp),4);
+  }
+}
+
+function drawUnit(ctx, u){
+  const bobY = Math.sin(u.animFrame*0.25)*2;
+  const y = u.y + bobY;
+  const s = u.size;
+
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(u.x,u.y+s*0.4,s*0.6,s*0.2,0,0,Math.PI*2); ctx.fill();
+
+  // Body
+  ctx.fillStyle = u.color;
+  ctx.beginPath(); ctx.arc(u.x, y, s, 0, Math.PI*2); ctx.fill();
+
+  // Symbol
+  ctx.font = `${s*1.2}px sans-serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(u.symbol, u.x, y);
+
+  // HP bar
+  const bw = s*2.2;
+  ctx.fillStyle='#300'; ctx.fillRect(u.x-bw/2, y-s-8, bw, 4);
+  ctx.fillStyle = u.hp/u.maxHp > 0.5 ? '#4f4' : '#f84';
+  ctx.fillRect(u.x-bw/2, y-s-8, bw*(u.hp/u.maxHp), 4);
+
+  ctx.textBaseline='alphabetic';
+}
+
+function drawBattleHPBars(W, H, B, gY){
+  // Left castle HP
+  const barW = Math.min(280, W*0.25);
+  const lx=20, rx=W-20-barW;
+  const by = BATTLE_TOP+10;
+  const bh=18;
+
+  // Left
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(lx,by,barW,bh);
+  ctx.fillStyle=NATION_COLORS[B.left.nation];
+  ctx.fillRect(lx,by,barW*(B.left.hp/B.left.maxHp),bh);
+  ctx.strokeStyle='rgba(240,192,64,0.5)'; ctx.lineWidth=1; ctx.strokeRect(lx,by,barW,bh);
+  ctx.fillStyle='#fff'; ctx.font="bold 11px 'Cinzel',serif"; ctx.textAlign='left';
+  ctx.fillText(`${NATION_NAMES[B.left.nation]} — ${Math.max(0,Math.round(B.left.hp))}/${B.left.maxHp}`, lx+4,by+13);
+
+  // Right
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(rx,by,barW,bh);
+  ctx.fillStyle=NATION_COLORS[B.right.nation];
+  ctx.fillRect(rx,by,barW*(B.right.hp/B.right.maxHp),bh);
+  ctx.strokeStyle='rgba(240,192,64,0.5)'; ctx.lineWidth=1; ctx.strokeRect(rx,by,barW,bh);
+  ctx.fillStyle='#fff'; ctx.textAlign='right';
+  ctx.fillText(`${NATION_NAMES[B.right.nation]} — ${Math.max(0,Math.round(B.right.hp))}/${B.right.maxHp}`, rx+barW-4,by+13);
+
+  // VS
+  ctx.fillStyle='rgba(240,192,64,0.9)'; ctx.textAlign='center'; ctx.font="bold 14px 'Cinzel',serif";
+  ctx.fillText('VS', W/2, by+14);
+
+  // Unit count
+  const leftUnits = B.units.filter(u=>!u.isRight).length;
+  const rightUnits = B.units.filter(u=>u.isRight).length;
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font="11px 'Crimson Text',serif";
+  ctx.textAlign='left'; ctx.fillText(`⚔ ${leftUnits} units`, lx, by+bh+16);
+  ctx.textAlign='right'; ctx.fillText(`${rightUnits} units ⚔`, rx+barW, by+bh+16);
+}
+
+function applyBattleResult(){
+  const B = G.battle;
+  const playerWon = (B.playerLeft && B.winner==='left') || (!B.playerLeft && B.winner==='right');
+
+  if(playerWon){
+    if(B.playerLeft){
+      // Player attacked — captured enemy castle
+      B.defender.nation = PLAYER_NATION;
+      B.defender.hp = Math.max(20, 70);
+      addMsg(`🏆 You captured ${B.defender.name}!`, 'good');
+    } else {
+      // Player defended — held their castle
+      B.attacker.hp = Math.max(15, B.attacker.hp - 40);
+      addMsg(`🛡 You defended ${B.defender.name} successfully!`, 'good');
+      G.nations[PLAYER_NATION].recentlyAttacked = G.nations[PLAYER_NATION].recentlyAttacked || {};
+      G.nations[PLAYER_NATION].recentlyAttacked[B.left.nation] = true;
+    }
+  } else {
+    if(B.playerLeft){
+      // Player attacked and lost — repelled
+      B.attacker.hp = Math.max(15, B.attacker.hp - 40);
+      addMsg(`💀 ${B.defender.name} held firm. You were repelled!`, 'bad');
+    } else {
+      // Player defended and lost — attacker captures the castle
+      B.defender.nation = B.left.nation;
+      B.defender.hp = Math.max(20, 50);
+      addMsg(`💀 ${B.defender.name} has fallen to ${NATION_NAMES[B.left.nation]}!`, 'bad');
+      G.nations[PLAYER_NATION].recentlyAttacked = G.nations[PLAYER_NATION].recentlyAttacked || {};
+      G.nations[PLAYER_NATION].recentlyAttacked[B.left.nation] = true;
+    }
+  }
+
+  G.gold = B.left.isPlayer ? B.left.gold : B.right.gold;
+  G.battle = null;
+  cancelAnimationFrame(battleRAF);
+  checkNationsDead();
+  checkWinLose();
+
+  // Process any remaining queued defense battles
+  if(G.pendingDefenses && G.pendingDefenses.length > 0){
+    setTimeout(processNextDefense, 600);
+  } else {
+    showOverworld();
+  }
+}
+
+// ---- PLAYER BATTLE ACTIONS ----
+function getPlayerSide(){
+  if(!G.battle) return null;
+  return G.battle.playerLeft ? G.battle.left : G.battle.right;
+}
+
+function buyUnit(type){
+  const side = getPlayerSide();
+  if(!side) return;
+  const def = UNIT_DEFS[type];
+  if(side.gold < def.cost){ addMsg('Not enough gold!','bad'); return; }
+  side.gold -= def.cost;
+  G.gold = side.gold;
+  const isRight = !G.battle.playerLeft;
+  spawnUnit(side, type, isRight);
+  updateStats();
+}
+
+function buyUpgrade(type){
+  const side = getPlayerSide();
+  if(!side) return;
+  const cost = structureCost(side, type);
+  if(side.gold < cost){ addMsg(`Not enough gold! Need ${cost}g`, 'bad'); return; }
+  side.gold -= cost;
+  G.gold = side.gold;
+  const isRight = !G.battle.playerLeft;
+  placeStructure(side, type, isRight);
+  updateStats();
+  const next = structureCost(side, type);
+  addMsg(`${type} built for ${cost}g! Next costs ${next}g`, 'good');
+}
+
+function retreatFromBattle(){
+  if(!G.battle) return;
+  const B = G.battle;
+  G.gold = B.left.isPlayer ? B.left.gold : B.right.gold;
+  if(B.playerLeft){
+    // Player was attacking — just retreat, lose some attacker HP
+    B.attacker.hp = Math.max(10, B.attacker.hp - 30);
+    addMsg('You retreated from the attack!', 'bad');
+  } else {
+    // Player was defending — castle is lost
+    B.defender.nation = B.left.nation;
+    B.defender.hp = Math.max(20, 50);
+    addMsg(`You abandoned ${B.defender.name}! It falls to ${NATION_NAMES[B.left.nation]}!`, 'bad');
+    G.nations[PLAYER_NATION].recentlyAttacked = G.nations[PLAYER_NATION].recentlyAttacked || {};
+    G.nations[PLAYER_NATION].recentlyAttacked[B.left.nation] = true;
+  }
+  G.battle = null;
+  cancelAnimationFrame(battleRAF);
+  checkNationsDead();
+  checkWinLose();
+  if(G.pendingDefenses && G.pendingDefenses.length > 0){
+    setTimeout(processNextDefense, 600);
+  } else {
+    showOverworld();
+  }
+}
+
+// ---- MESSAGES ----
+function addMsg(text, type=''){
+  const log = el('msg-log');
+  if(!log) return;
+  const div = document.createElement('div');
+  div.className = 'msg' + (type?' '+type:'');
+  div.textContent = text;
+  log.prepend(div);
+  setTimeout(()=>div.remove(), 6000);
+  while(log.children.length > 6) log.lastChild.remove();
+}
+
+// ---- INIT ----
+initGame();
+addMsg('⚔ Welcome to Iron Realm! Select a castle and attack.', 'good');
+
+// ===================== END =====================
+</script>
+</body>
+</html>
